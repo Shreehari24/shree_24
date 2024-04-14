@@ -1,0 +1,185 @@
+---
+title: Quarto Data Analysis
+format: html
+editor: visual
+echo: false
+warning: false
+---
+
+```{r}
+library(readr)
+
+unicef_indicator_1 <- read_csv("unicef_indicator_1.csv", col_types = cols(
+  country = col_character(),
+  alpha_2_code = col_character(),
+  alpha_3_code = col_character(),
+  numeric_code = col_double(),
+  indicator = col_character(),
+  time_period = col_double(),
+  obs_value = col_double(),
+  sex = col_character(),
+  unit_multiplier = col_character(),
+  unit_of_measure = col_character(),
+  observation_status = col_character(),
+  observation_confidentiality = col_character(),
+  time_period_activity_related_to_when_the_data_are_collected = col_logical(),
+  current_age = col_character()
+))
+
+unicef_metadata <- read_csv("unicef_metadata.csv", col_types = cols(
+  country = col_character(),
+  alpha_2_code = col_character(),
+  alpha_3_code = col_character(),
+  iso3c = col_character(),
+  numeric_code = col_double(),
+  year = col_double(),
+  GNI = col_double(),
+  Inflation = col_double(),
+  Life_expectancy = col_double(),
+  Military_expenditure = col_double()
+))
+```
+
+```{r}
+library(dplyr)
+combined_data <- unicef_indicator_1 %>%
+  inner_join(unicef_metadata, by = c("alpha_3_code", "time_period" = "year"))
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+map_data <- unicef_indicator_1 %>%
+  group_by(alpha_3_code) %>%
+  summarize(mean_obs_value = mean(obs_value, na.rm = TRUE), .groups = "drop") %>%
+  inner_join(world, by = c("alpha_3_code" = "iso_a3"))
+
+map_data <- st_as_sf(map_data)
+
+ggplot(data = map_data) +
+  geom_sf(aes(fill = mean_obs_value), color = "white") +
+  labs(title = "Vax Voyage: Navigating the Waves of Rubella Protection for Infants") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
+
+**World Map Chart**
+
+**Title: “Global Canvas of Care: Mapping Rubella Vaccination Rates Worldwide”**
+
+Story: This world map chart artistically unfolds the story of global health initiatives by depicting average vaccination rates for the rubella vaccine by country. It vividly color-codes each nation to highlight the disparities in public health efforts, offering a panoramic view of areas where interventions have been effective and others where challenges remain. This map serves as a crucial tool for understanding and improving global strategies to ensure every infant receives critical early vaccinations.
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+# Load and prepare data
+unicef_indicator_1 <- read_csv("unicef_indicator_1.csv", col_types = cols(
+  country = col_character(),
+  alpha_2_code = col_character(),
+  alpha_3_code = col_character(),
+  numeric_code = col_double(),
+  indicator = col_character(),
+  time_period = col_double(),
+  obs_value = col_double(),
+  sex = col_character(),
+  unit_multiplier = col_character(),
+  unit_of_measure = col_character(),
+  observation_status = col_character(),
+  observation_confidentiality = col_character(),
+  time_period_activity_related_to_when_the_data_are_collected = col_logical(),
+  current_age = col_character()
+))
+
+# Create Albania data
+albania_data <- unicef_indicator_1 %>%
+  filter(country == "Albania", indicator == "Percentage of surviving infants who received the first dose of rubella-containing vaccine") %>%
+  select(time_period, obs_value) %>%
+  arrange(time_period)
+# Create and print Albania vaccination chart
+albania_vaccination_chart <- ggplot(albania_data, aes(x = as.factor(time_period), y = obs_value)) +
+  geom_col(fill = "steelblue", color = "black") +  
+  labs(title = "Guardians of Health: Unveiling Rubella Vaccine Triumphs in Albanian Infants",
+       x = "Year",
+       y = "Percentage of Infants Receiving First Dose of Rubella Vaccine") +
+  theme_minimal() +  
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+print(albania_vaccination_chart)
+```
+
+**Bar Chart**
+
+**Title: “Steady Shields: Albania’s Commitment to Infant Health (2001-2022)”**
+
+Story: The bar chart chronicles Albania’s dedication to public health through the lens of rubella vaccination from 2001 to 2022. Each bar measures the annual percentage of infants vaccinated, showcasing slight fluctuations but predominantly high coverage. This visual narrative reinforces the significance of Albania’s sustained public health policies aimed at maintaining robust immunization levels among infants, safeguarding a young generation against a preventable threat.
+
+```{r}
+# Filter and join data
+analysis_data <- unicef_indicator_1 %>%
+  filter(indicator == "Percentage of surviving infants who received the first dose of rubella-containing vaccine") %>%
+  inner_join(
+    unicef_metadata %>% select(alpha_3_code, year, `GDP per capita (constant 2015 US$)`),
+    by = c("alpha_3_code", "time_period" = "year")
+  )
+
+print(head(analysis_data))
+
+library(ggplot2)
+library(dplyr)
+
+# Create and print the scatterplot with regression
+scatterplot_with_regression <- ggplot(analysis_data, aes(x = `GDP per capita (constant 2015 US$)`, y = obs_value)) +
+  geom_point(aes(color = alpha_3_code), alpha = 0.5) + 
+  geom_smooth(method = "lm", color = "blue", se = FALSE) +  
+  labs(title = "Relationship between GDP per Capita and Percentage of Infants Receiving First Dose of Rubella Vaccine",
+       x = "GDP per Capita (constant 2015 US$)",
+       y = "Percentage of Infants Vaccinated") +
+  theme_minimal() + 
+  theme(legend.position = "none")
+
+print(scatterplot_with_regression)
+```
+
+**Scatterplot with a Linear Regression Line**
+
+**Title: “Economic Prosperity and Public Health: Correlating GDP with Rubella Vaccination Rates”**
+
+Story: This scatterplot draws a direct line between economic health and vaccination success. By correlating GDP per capita with the percentage of infants receiving the first dose of the rubella vaccine, the plot highlights how economic well-being influences public health outcomes. Countries with higher GDP per capita generally achieve better vaccination rates, underscoring the critical role of economic stability in supporting effective healthcare delivery and enhancing overall public health.
+
+```{r}
+if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages("ggplot2")
+if (!requireNamespace("dplyr", quietly = TRUE)) install.packages("dplyr")
+
+library(ggplot2)
+library(dplyr)
+
+albania_data <- unicef_indicator_1 %>%
+  filter(country == "Albania", indicator == "Percentage of surviving infants who received the first dose of rubella-containing vaccine") %>%
+  select(time_period, obs_value)
+
+time_series_plot <- ggplot(albania_data, aes(x = time_period, y = obs_value)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Decades of Progress: Rubella Vaccine Uptake Among Albanian Infants (2001-2022)", x = "Year", y = "Vaccination Rate (%)") +
+  theme_minimal()
+
+print(time_series_plot)
+```
+
+**Time-Series Chart**
+
+**Title: “A Timeline of Tenacity: Albania’s Vaccination Vigilance Over the Years”**
+
+Story: The time-series chart traces the pulse of Albania’s health sector through its annual rubella vaccination rates from 2001 to 2022. With each point connected by lines, the chart demonstrates the consistent effort to protect infants against rubella, highlighting the country’s commitment to public health despite minor year-to-year variations. This visualization not only reflects historical achievements but also inspires continued vigilance in vaccination efforts.
